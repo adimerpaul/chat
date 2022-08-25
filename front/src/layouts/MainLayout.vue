@@ -164,8 +164,9 @@
 </template>
 
 <script>
-const socket = io('https://socket.carnavaloruro.tk')
 import {useCounterStore} from "stores/example-store";
+import {date} from "quasar";
+import io from "socket.io-client";
 export default {
   name: 'WhatsappLayout',
   data(){
@@ -180,11 +181,14 @@ export default {
       url:process.env.API
     }
   },
-  async created() {
-    socket.on('chat message', message => {
-      // console.log(message)
-      this.chatGet()
-    })
+  created() {
+    this.socketInstance = io("http://192.168.1.124:3000");
+    this.socketInstance.on(
+      "message:received", (data) => {
+        this.store.chats.push(data);
+      }
+    )
+
     if (this.store.users.length == 0) {
       this.$api.get('user').then(res=>{
         res.data.forEach(r=>{
@@ -211,14 +215,18 @@ export default {
       })
     },
     chatInsert(){
-      this.loading=true
+      let chat={
+        fecha:date.formatDate(new Date(),'YYYY-MM-DD HH:mm:ss'),
+        message:this.message,
+        userEnviado_id:1,
+        userRecibido_id:this.user.id,
+      }
+      this.store.chats.push(chat)
+      this.socketInstance.emit('message', chat);
       this.$api.post('chat',{
         userEnviado_id:1,
         message:this.message,
         userRecibido_id:this.user.id,
-      }).then(res=>{
-        socket.emit('chat message','adimer')
-        // this.store.chats.push(res.data)
       })
       this.message=''
     },
